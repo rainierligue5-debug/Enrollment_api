@@ -7,14 +7,14 @@
 cd c:\PIT-Integ\enrollment_api
 python manage.py runserver
 ```
-✅ Backend runs at: **http://localhost:8000**
+Backend runs at: **http://localhost:8000**
 
 ### Frontend (React)
 ```powershell
 cd c:\PIT-Integ\enrollment_api\frontend
 npm start
 ```
-✅ Frontend runs at: **http://localhost:3000**
+Frontend runs at: **http://localhost:3000**
 
 ## What You Get
 - **Dashboard** - Overview with statistics

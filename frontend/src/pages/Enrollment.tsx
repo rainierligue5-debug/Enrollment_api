@@ -33,6 +33,8 @@ const EnrollmentPage: React.FC = () => {
   });
 
   const [bulkData, setBulkData] = useState("");
+  const [bulkItems, setBulkItems] = useState<Array<{ student_id: string; subject_id: string; section_id: string }>>([]);
+  const [bulkForm, setBulkForm] = useState({ student_id: "", subject_id: "", section_id: "" });
 
   useEffect(() => {
     fetchData();
@@ -87,29 +89,37 @@ const EnrollmentPage: React.FC = () => {
     }
   };
 
+  const handleAddBulkItem = () => {
+    if (!bulkForm.student_id || !bulkForm.subject_id) {
+      setError("Please select a student and subject");
+      return;
+    }
+    setBulkItems([...bulkItems, { ...bulkForm }]);
+    setBulkForm({ student_id: "", subject_id: "", section_id: "" });
+    setError(null);
+  };
+
+  const handleRemoveBulkItem = (index: number) => {
+    setBulkItems(bulkItems.filter((_, i) => i !== index));
+  };
+
   const handleBulkEnroll = async () => {
-    if (!bulkData.trim()) {
-      setError("Please enter enrollment data");
+    if (bulkItems.length === 0) {
+      setError("Please add at least one enrollment");
       return;
     }
 
     try {
-      const lines = bulkData
-        .trim()
-        .split("\n")
-        .filter((line) => line.trim());
-      const enrollmentList = lines.map((line) => {
-        const [student_id, subject_id, section_id] = line.split(",").map((s) => s.trim());
-        return {
-          student_id: Number(student_id),
-          subject_id: Number(subject_id),
-          ...(section_id && { section_id: Number(section_id) }),
-        };
-      });
+      const enrollmentList = bulkItems.map((item) => ({
+        student_id: Number(item.student_id),
+        subject_id: Number(item.subject_id),
+        ...(item.section_id && { section_id: Number(item.section_id) }),
+      }));
 
       const result = await bulkEnroll(enrollmentList);
       await fetchData();
-      setBulkData("");
+      setBulkItems([]);
+      setBulkForm({ student_id: "", subject_id: "", section_id: "" });
       setShowBulkForm(false);
       setSuccessMessage(
         `Bulk enrollment completed: ${result.successful} successful, ${result.failed} failed`
@@ -337,29 +347,142 @@ const EnrollmentPage: React.FC = () => {
         {showBulkForm && (
           <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500">
             <h3 className="text-lg font-semibold mb-4 text-gray-900">
-              Bulk Enrollment
+              Bulk Enrollment - Add Multiple Students
             </h3>
-            <p className="text-gray-600 text-sm mb-4">
-              Enter data as CSV: student_id, subject_id, [section_id] (one per line)
-            </p>
-            <textarea
-              value={bulkData}
-              onChange={(e) => setBulkData(e.target.value)}
-              placeholder="1,1,1&#10;2,2,2&#10;3,3,3"
-              className="w-full h-40 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm"
-            />
+            
+            {/* Add Items Section */}
+            <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+              <h4 className="font-semibold text-gray-900 mb-4">Add Enrollments</h4>
+              <div className="grid grid-cols-1 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Student
+                  </label>
+                  <select
+                    value={bulkForm.student_id}
+                    onChange={(e) =>
+                      setBulkForm({ ...bulkForm, student_id: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="">Select Student</option>
+                    {students.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.student_id} - {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            <div className="flex gap-3 mt-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Subject
+                  </label>
+                  <select
+                    value={bulkForm.subject_id}
+                    onChange={(e) =>
+                      setBulkForm({ ...bulkForm, subject_id: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="">Select Subject</option>
+                    {subjects.map((subj) => (
+                      <option key={subj.id} value={subj.id}>
+                        {subj.code} - {subj.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Section (Optional)
+                  </label>
+                  <select
+                    value={bulkForm.section_id}
+                    onChange={(e) =>
+                      setBulkForm({ ...bulkForm, section_id: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="">Auto-assign Section</option>
+                    {sections.map((sec) => {
+                      const subj = getSubjectInfo(sec.subject);
+                      return (
+                        <option key={sec.id} value={sec.id}>
+                          {subj?.code} - {sec.name} ({sec.schedule})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              </div>
+
+              <button
+                onClick={handleAddBulkItem}
+                className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition font-medium flex items-center justify-center gap-2"
+              >
+                <Plus className="w-4 h-4" /> Add to List
+              </button>
+            </div>
+
+            {/* Items List */}
+            {bulkItems.length > 0 && (
+              <div className="mb-6">
+                <h4 className="font-semibold text-gray-900 mb-3">
+                  Items to Enroll ({bulkItems.length})
+                </h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Student</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Subject</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Section</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {bulkItems.map((item, index) => {
+                        const student = students.find((s) => s.id === Number(item.student_id));
+                        const subject = subjects.find((s) => s.id === Number(item.subject_id));
+                        const section = item.section_id ? sections.find((s) => s.id === Number(item.section_id)) : null;
+                        return (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-4 py-2 text-gray-900">{student?.name}</td>
+                            <td className="px-4 py-2 text-gray-900">{subject?.code} - {subject?.title}</td>
+                            <td className="px-4 py-2 text-gray-900">{section?.name || "Auto-assign"}</td>
+                            <td className="px-4 py-2">
+                              <button
+                                onClick={() => handleRemoveBulkItem(index)}
+                                className="text-red-600 hover:text-red-800 transition"
+                                title="Remove"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3">
               <button
                 onClick={handleBulkEnroll}
-                className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition"
+                disabled={bulkItems.length === 0}
+                className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
               >
-                Bulk Enroll
+                Submit Bulk Enrollment ({bulkItems.length})
               </button>
               <button
                 onClick={() => {
                   setShowBulkForm(false);
-                  setBulkData("");
+                  setBulkItems([]);
+                  setBulkForm({ student_id: "", subject_id: "", section_id: "" });
                   setError(null);
                 }}
                 className="bg-gray-300 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-400 transition"
