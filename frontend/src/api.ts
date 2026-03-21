@@ -1,5 +1,5 @@
 // src/api.ts
-import axios from "axios";
+import axios, { AxiosInstance } from "axios";
 import {
   Student,
   NewStudent,
@@ -11,9 +11,7 @@ import {
   NewEnrollment,
 } from "./type";
 
-const API = axios.create({
-  baseURL: "http://127.0.0.1:8000/api/",
-});
+const API: AxiosInstance = axios.create({ baseURL: "http://127.0.0.1:8000/api/" });
 
 // ============== STUDENTS ==============
 

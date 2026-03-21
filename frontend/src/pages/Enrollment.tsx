@@ -541,8 +541,6 @@ const EnrollmentPage: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {enrollments.map((enrollment) => {
-                    const studentId = typeof enrollment.student === 'object' ? enrollment.student.id : enrollment.student;
-                    const student = students.find((s) => s.id === studentId);
                     const subject = subjects.find(
                       (s) => s.id === (typeof enrollment.subject === 'object' ? enrollment.subject.id : enrollment.subject)
                     );
@@ -558,10 +556,10 @@ const EnrollmentPage: React.FC = () => {
                         className="hover:bg-slate-50 transition"
                       >
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                          {student?.student_id || "-"}
+                          {enrollment.student_id || "-"}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700">
-                          {student?.name || "-"}
+                          {enrollment.student_name || "-"}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700">
                           <div>

@@ -71,6 +71,8 @@ export interface NewSection {
 export interface Enrollment {
   id: number;
   student: Student | { id: number; name: string };
+  student_id: string;
+  student_name: string;
   subject: Subject | number;
   section: Section | number;
   status: 'enrolled' | 'dropped' | 'completed';
