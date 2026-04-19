@@ -43,10 +43,19 @@ class Student(models.Model):
 
 
 class Subject(models.Model):
+    YEAR_CHOICES = [
+        ('1st', '1st Year'),
+        ('2nd', '2nd Year'),
+        ('3rd', '3rd Year'),
+        ('4th', '4th Year'),
+    ]
+
     code = models.CharField(max_length=20, unique=True)
     title = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     units = models.IntegerField()
+    course = models.CharField(max_length=100, blank=True)  # e.g., "Computer Science", "Engineering"
+    year_level = models.CharField(max_length=10, choices=YEAR_CHOICES, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

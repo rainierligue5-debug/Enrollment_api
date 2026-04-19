@@ -58,13 +58,26 @@ class SubjectViewSet(viewsets.ModelViewSet):
     ViewSet for Subject management.
     
     Endpoints:
-    - GET /api/subjects/ - List all subjects
+    - GET /api/subjects/ - List all subjects (with optional course/year_level filters)
     - POST /api/subjects/ - Create new subject
     - GET /api/subjects/{id}/ - Retrieve subject details
     - GET /api/subjects/{id}/sections/ - Get all sections for subject
     """
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
+
+    def get_queryset(self):
+        """Filter subjects by course and year_level if provided"""
+        queryset = Subject.objects.all()
+        course = self.request.query_params.get('course', None)
+        year_level = self.request.query_params.get('year_level', None)
+        
+        if course:
+            queryset = queryset.filter(course__iexact=course)
+        if year_level:
+            queryset = queryset.filter(year_level=year_level)
+        
+        return queryset
 
     @action(detail=True, methods=['get'])
     def sections(self, request, pk=None):

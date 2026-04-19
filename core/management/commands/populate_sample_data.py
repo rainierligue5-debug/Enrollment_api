@@ -18,19 +18,27 @@ class Command(BaseCommand):
         # Create Subjects
         self.stdout.write('Creating subjects...')
         subjects_data = [
-            {'code': 'CS101', 'title': 'Introduction to Programming', 'description': 'Learn the basics of programming using Python', 'units': 4},
-            {'code': 'CS102', 'title': 'Data Structures', 'description': 'Study fundamental data structures and algorithms', 'units': 4},
-            {'code': 'CS201', 'title': 'Web Development', 'description': 'Build web applications with Django and React', 'units': 4},
-            {'code': 'CS202', 'title': 'Database Design', 'description': 'Master relational databases and SQL', 'units': 3},
-            {'code': 'MATH101', 'title': 'Calculus I', 'description': 'Introduction to differential calculus', 'units': 4},
-            {'code': 'MATH102', 'title': 'Linear Algebra', 'description': 'Vectors, matrices, and linear transformations', 'units': 3},
+            {'code': 'CS101', 'title': 'Introduction to Programming', 'description': 'Learn the basics of programming using Python', 'units': 4, 'course': 'Computer Science', 'year_level': '1st'},
+            {'code': 'CS102', 'title': 'Data Structures', 'description': 'Study fundamental data structures and algorithms', 'units': 4, 'course': 'Computer Science', 'year_level': '2nd'},
+            {'code': 'CS201', 'title': 'Web Development', 'description': 'Build web applications with Django and React', 'units': 4, 'course': 'Computer Science', 'year_level': '3rd'},
+            {'code': 'CS202', 'title': 'Database Design', 'description': 'Master relational databases and SQL', 'units': 3, 'course': 'Computer Science', 'year_level': '3rd'},
+            {'code': 'MATH101', 'title': 'Calculus I', 'description': 'Introduction to differential calculus', 'units': 4, 'course': 'Computer Science', 'year_level': '1st'},
+            {'code': 'MATH102', 'title': 'Linear Algebra', 'description': 'Vectors, matrices, and linear transformations', 'units': 3, 'course': 'Computer Science', 'year_level': '2nd'},
         ]
 
         subjects = {}
         for subject_data in subjects_data:
-            subject, created = Subject.objects.get_or_create(**subject_data)
+            subject, created = Subject.objects.get_or_create(
+                code=subject_data['code'],
+                defaults=subject_data
+            )
+            if not created:
+                # Update existing subject with new data
+                for key, value in subject_data.items():
+                    setattr(subject, key, value)
+                subject.save()
             subjects[subject_data['code']] = subject
-            status = 'Created' if created else 'Already exists'
+            status = 'Created' if created else 'Updated'
             self.stdout.write(f"  {subject_data['code']}: {status}")
 
         # Create Sections
@@ -87,7 +95,10 @@ class Command(BaseCommand):
 
         students = {}
         for student_data in students_data:
-            student, created = Student.objects.get_or_create(**student_data)
+            student, created = Student.objects.get_or_create(
+                student_id=student_data['student_id'],
+                defaults=student_data
+            )
             students[student_data['student_id']] = student
             status = 'Created' if created else 'Already exists'
             self.stdout.write(f"  {student_data['student_id']}: {status}")

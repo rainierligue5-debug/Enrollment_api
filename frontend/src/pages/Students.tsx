@@ -1,8 +1,8 @@
 // src/pages/Students.tsx
-import React, { useEffect, useState } from "react";
-import { Plus, Edit2, Trash2, AlertCircle, Eye } from "lucide-react";
+import React, { useEffect, useState, useRef } from "react";
+import { Plus, Edit2, Trash2, AlertCircle, Eye, FileText } from "lucide-react";
 import { Student, NewStudent } from "../type";
-import { getStudents, createStudent, updateStudent, deleteStudent, getStudentEnrollmentSummary } from "../api";
+import { getStudents, createStudent, updateStudent, deleteStudent, getStudentEnrollmentSummary, getSubjects } from "../api";
 
 const Students: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
@@ -12,6 +12,9 @@ const Students: React.FC = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [showProspectus, setShowProspectus] = useState(false);
+  const [prospectusData, setProspectusData] = useState<any[]>([]);
 
   // Form state
   const [formData, setFormData] = useState<NewStudent>({
@@ -102,6 +105,21 @@ const Students: React.FC = () => {
     }
   };
 
+  const handleViewProspectus = async (student: Student) => {
+    try {
+      const subjects = await getSubjects({
+        course: student.course,
+        year_level: student.year_level,
+      });
+      setProspectusData(subjects || []);
+      setSelectedStudent(student);
+      setShowProspectus(true);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to fetch prospectus");
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       student_id: "",
@@ -114,6 +132,42 @@ const Students: React.FC = () => {
     setEditingId(null);
     setShowForm(false);
   };
+
+  const searchRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      // Focus search with `/` (unless typing in a form control)
+      if (e.key === "/") {
+        const active = document.activeElement as HTMLElement | null;
+        if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable)) return;
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+      // Clear search with Escape
+      if (e.key === "Escape") {
+        if (searchRef.current && document.activeElement === searchRef.current) {
+          (searchRef.current as HTMLInputElement).value = "";
+          setSearchTerm("");
+          (searchRef.current as HTMLInputElement).blur();
+        } else {
+          setSearchTerm("");
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const filteredStudents = students.filter((s) => {
+    if (!searchTerm) return true;
+    const q = searchTerm.toLowerCase();
+    return (
+      s.name.toLowerCase().includes(q) ||
+      s.student_id.toLowerCase().includes(q) ||
+      (s.email || "").toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -231,6 +285,16 @@ const Students: React.FC = () => {
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="p-4 flex items-center justify-between gap-4">
+            <input
+              ref={searchRef}
+              type="search"
+              placeholder="Search students by name, ID, or email (press / to focus)"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full md:w-96 px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gradient-to-r from-slate-900 to-slate-800 text-white">
@@ -245,7 +309,14 @@ const Students: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {students.map((student, index) => (
+                {filteredStudents.length === 0 && students.length > 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-8 text-center text-slate-600">
+                      No students match your search.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredStudents.map((student, index) => (
                   <tr key={student.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
                       <span className="font-semibold text-slate-900">{student.student_id}</span>
@@ -271,6 +342,13 @@ const Students: React.FC = () => {
                           <Eye size={16} />
                         </button>
                         <button
+                          onClick={() => handleViewProspectus(student)}
+                          className="p-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg transition-colors"
+                          title="View Prospectus"
+                        >
+                          <FileText size={16} />
+                        </button>
+                        <button
                           onClick={() => handleEdit(student)}
                           className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors"
                           title="Edit"
@@ -287,7 +365,7 @@ const Students: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>
@@ -355,6 +433,50 @@ const Students: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowDetails(false)}
+                className="w-full bg-slate-300 hover:bg-slate-400 text-slate-900 font-semibold py-2 rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Prospectus Modal */}
+      {showProspectus && selectedStudent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-96 overflow-y-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-6 flex items-center justify-between">
+              <h3 className="text-xl font-bold">{selectedStudent.name} - Prospectus</h3>
+              <button
+                onClick={() => setShowProspectus(false)}
+                className="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <h4 className="font-semibold text-slate-900 mb-3">Available Subjects</h4>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {prospectusData.length === 0 ? (
+                    <p className="text-slate-600">No subjects available.</p>
+                  ) : (
+                    prospectusData.map((sub: any) => (
+                      <div key={sub.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-semibold text-slate-900">{sub.code} - {sub.title}</p>
+                            <p className="text-sm text-slate-600 mt-1">{sub.description}</p>
+                          </div>
+                          <div className="text-sm font-semibold text-slate-900">{sub.units}u</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setShowProspectus(false)}
                 className="w-full bg-slate-300 hover:bg-slate-400 text-slate-900 font-semibold py-2 rounded-lg transition-colors"
               >
                 Close

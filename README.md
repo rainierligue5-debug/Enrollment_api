@@ -50,7 +50,8 @@ cd Enrollment_api
 
 # Create virtual environment
 python -m venv venv
-venv\Scripts\activate  # Windows
+venv\Scripts\activate  # Windows 
+#run if necessary Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass 
 # source venv/bin/activate  # Linux/Mac
 
 # Install dependencies

@@ -46,8 +46,15 @@ export const deleteStudent = async (id: number): Promise<void> => {
 
 // ============== SUBJECTS ==============
 
-export const getSubjects = async (): Promise<Subject[]> => {
-  const res = await API.get<any>("subjects/");
+export const getSubjects = async (params?: { course?: string; year_level?: string }): Promise<Subject[]> => {
+  let url = "subjects/";
+  if (params) {
+    const query = new URLSearchParams();
+    if (params.course) query.append('course', params.course);
+    if (params.year_level) query.append('year_level', params.year_level);
+    url += '?' + query.toString();
+  }
+  const res = await API.get<any>(url);
   return res.data.results || res.data;
 };
 

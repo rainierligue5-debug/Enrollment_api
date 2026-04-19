@@ -7,7 +7,7 @@ class SubjectSerializer(serializers.ModelSerializer):
     """Serializer for Subject model"""
     class Meta:
         model = Subject
-        fields = ['id', 'code', 'title', 'description', 'units', 'created_at']
+        fields = ['id', 'code', 'title', 'description', 'units', 'course', 'year_level', 'created_at']
         read_only_fields = ['created_at']
 
 
