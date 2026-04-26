@@ -9,9 +9,104 @@ import {
   NewSection,
   Enrollment,
   NewEnrollment,
+  User,
+  AuthResponse,
+  MyEnrollmentsResponse,
 } from "./type";
 
 const API: AxiosInstance = axios.create({ baseURL: "http://127.0.0.1:8000/api/" });
+
+API.interceptors.request.use((config) => {
+  const token = localStorage.getItem("access_token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+API.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("user");
+      window.location.href = "/";
+    }
+    return Promise.reject(error);
+  }
+);
+
+// ============== AUTH ==============
+
+export const login = async (email: string, password: string): Promise<AuthResponse> => {
+  const res = await API.post<AuthResponse>("auth/login/", { email, password });
+  if (res.data.access) {
+    localStorage.setItem("access_token", res.data.access);
+    localStorage.setItem("user", JSON.stringify(res.data.user));
+  }
+  return res.data;
+};
+
+export const logout = async (): Promise<void> => {
+  await API.post("auth/logout/");
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("user");
+};
+
+export const getCurrentUser = async (): Promise<User> => {
+  const res = await API.get<User>("auth/me/");
+  return res.data;
+};
+
+export const getStoredUser = (): User | null => {
+  const userStr = localStorage.getItem("user");
+  return userStr ? JSON.parse(userStr) : null;
+};
+
+export const updateCurrentUser = async (data: { name?: string; email?: string; password?: string }): Promise<User> => {
+  const res = await API.patch<User>("auth/me/", data);
+  return res.data;
+};
+
+// ============== STUDENT USERS (Admin) ==============
+
+export const getStudentUsers = async (): Promise<User[]> => {
+  const res = await API.get<User[]>("users/students/");
+  return res.data;
+};
+
+export const createStudentUser = async (data: { 
+  email: string; 
+  name: string; 
+  password?: string; 
+  student_id?: string 
+}): Promise<User> => {
+  const res = await API.post<User>("users/students/", data);
+  return res.data;
+};
+
+export const updateStudentUser = async (id: number, data: { 
+  name?: string; 
+  email?: string; 
+  password?: string; 
+  student_id?: string | null 
+}): Promise<User> => {
+  const res = await API.patch<User>(`users/students/${id}/`, data);
+  return res.data;
+};
+
+export const deleteStudentUser = async (id: number): Promise<void> => {
+  await API.delete(`users/students/${id}/`);
+};
+
+export const resetStudentPassword = async (id: number): Promise<{ new_password: string; user: User }> => {
+  const res = await API.post(`users/students/${id}/reset-password`);
+  return res.data;
+};
+
+export const isAuthenticated = (): boolean => {
+  return !!localStorage.getItem("access_token");
+};
 
 // ============== STUDENTS ==============
 
@@ -141,5 +236,12 @@ export const deleteEnrollment = async (id: number): Promise<void> => {
 
 export const bulkEnroll = async (enrollments: any[]): Promise<any> => {
   const res = await API.post("enrollments/bulk-enroll/", { enrollments });
+  return res.data;
+};
+
+// ============== STUDENT MY ENROLLMENTS ==============
+
+export const getMyEnrollments = async (): Promise<MyEnrollmentsResponse> => {
+  const res = await API.get<MyEnrollmentsResponse>("enrollments/my_enrollments/");
   return res.data;
 };

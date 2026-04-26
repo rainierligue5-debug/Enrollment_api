@@ -89,3 +89,36 @@ export interface NewEnrollment {
   section?: number;
   status?: string;
 }
+
+// USER TYPES
+export interface User {
+  id: number;
+  email: string;
+  name: string;
+  role: 'admin' | 'student';
+  student?: number | null;
+  student_id?: string | null;
+  student_info?: {
+    student_id: string;
+    name: string;
+    email: string;
+    course: string;
+    year_level: string;
+    age?: number;
+  } | null;
+  is_active: boolean;
+  date_joined: string;
+}
+
+export interface AuthResponse {
+  access: string;
+  refresh: string;
+  user: User;
+}
+
+export interface MyEnrollmentsResponse {
+  student: Student;
+  enrollments: Enrollment[];
+  total_units: number;
+  total_subjects: number;
+}

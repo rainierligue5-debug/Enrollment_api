@@ -188,9 +188,82 @@ npm start
 - **Duplicate Errors**: Prevention of double enrollment attempts
 - **Network Errors**: Graceful handling of API failures
 
-## 🔧 API Documentation
+## 🔐 Authentication & User Roles
 
-### REST Endpoints
+### User Roles
+- **Administrator** (`admin`): Full CRUD access to all endpoints (students, subjects, sections, enrollments)
+- **Student** (`student`): View-only access to their own enrollments
+
+### Login Endpoint
+```
+POST /api/auth/login/
+Content-Type: application/json
+
+{
+  "email": "admin@admin.edu",
+  "password": "admin123"
+}
+```
+
+**Response:**
+```json
+{
+  "access": "eyJ...",
+  "refresh": "eyJ...",
+  "user": {
+    "id": 1,
+    "email": "admin@admin.edu",
+    "name": "System Administrator",
+    "role": "admin",
+    "student": null
+  }
+}
+```
+
+### Get Current User
+```
+GET /api/auth/me/
+Authorization: Bearer <access_token>
+```
+
+### My Enrollments (Student)
+```
+GET /api/enrollments/my_enrollments/
+Authorization: Bearer <access_token>
+```
+Returns the logged-in student's enrollments, subjects, sections, and total units.
+
+### Student Users Management (Admin Only)
+```
+GET    /api/users/students/                    # List all student login accounts
+POST   /api/users/students/                    # Create new student user
+GET    /api/users/students/{id}/               # Get student user details
+PATCH  /api/users/students/{id}/               # Update student user
+DELETE /api/users/students/{id}/               # Delete student user
+POST   /api/users/students/{id}/reset_password/  # Reset password (returns new password)
+```
+
+### Logout
+```
+POST /api/auth/logout/
+```
+No authentication required (clears token on frontend).
+
+## 🧪 Testing Credentials
+
+### Create Test Users
+```bash
+python manage.py create_test_users
+```
+
+### Test Accounts
+
+| Role | Email | Password | Description |
+|------|------|----------|--------------|
+| Admin | admin@admin.edu | admin123 | Full system access |
+| Student | student@ustp.edu | student123 | View own enrollments (linked to STU001) |
+
+## 🔧 API Documentation
 
 #### Students
 ```
@@ -199,7 +272,7 @@ POST   /api/students/                    # Create new student
 GET    /api/students/{id}/               # Get student details
 PUT    /api/students/{id}/               # Update student
 DELETE /api/students/{id}/               # Delete student
-GET    /api/students/{id}/enrollment-summary/  # Get enrollment summary
+GET    /api/students/{id}/enrollment_summary/  # Get enrollment summary
 ```
 
 #### Subjects
@@ -232,6 +305,42 @@ DELETE /api/enrollments/{id}/            # Delete enrollment
 POST   /api/enrollments/bulk-enroll/     # Bulk enrollment
 POST   /api/enrollments/{id}/drop/       # Drop enrollment
 ```
+
+### API Access Rules
+
+| Endpoint | Admin | Student | Anonymous |
+|----------|-------|---------|-----------|
+| **Authentication** | | | |
+| POST /api/auth/login/ | ✓ | ✓ | ✓ |
+| POST /api/auth/logout/ | ✓ | ✓ | ✓ |
+| GET /api/auth/me/ | ✓ | ✓ | ✗ |
+| **Students** | | | |
+| GET /api/students/ | ✓ | ✗ | ✗ |
+| POST /api/students/ | ✓ | ✗ | ✗ |
+| GET /api/students/{id}/ | ✓ | ✗ | ✗ |
+| GET /api/students/{id}/enrollment-summary/ | ✓ | ✗ | ✗ |
+| PUT/DELETE /api/students/{id}/ | ✓ | ✗ | ✗ |
+| **Subjects** | | | |
+| GET /api/subjects/ | ✓ | ✓ | ✗ |
+| POST /api/subjects/ | ✓ | ✗ | ✗ |
+| GET /api/subjects/{id}/sections/ | ✓ | ✓ | ✗ |
+| PUT/DELETE /api/subjects/{id}/ | ✓ | ✗ | ✗ |
+| **Sections** | | | |
+| GET /api/sections/ | ✓ | ✓ | ✗ |
+| POST /api/sections/ | ✓ | ✗ | ✗ |
+| GET /api/sections/{id}/enrolled-students/ | ✓ | ✓ | ✗ |
+| PUT/DELETE /api/sections/{id}/ | ✓ | ✗ | ✗ |
+| **Enrollments** | | | |
+| GET /api/enrollments/ | ✓ (all) | ✓ (own only) | ✗ |
+| POST /api/enrollments/ | ✓ | ✗ | ✗ |
+| POST /api/enrollments/bulk-enroll/ | ✓ | ✗ | ✗ |
+| GET /api/enrollments/my_enrollments/ | ✗ | ✓ | ✗ |
+| POST /api/enrollments/{id}/drop/ | ✓ | ✗ | ✗ |
+| **User Management** | | | |
+| GET /api/users/students/ | ✓ | ✗ | ✗ |
+| POST /api/users/students/ | ✓ | ✗ | ✗ |
+| GET/PATCH/DELETE /api/users/students/{id}/ | ✓ | ✗ | ✗ |
+| POST /api/users/students/{id}/reset_password/ | ✓ | ✗ | ✗ |
 
 ### Sample API Requests
 
@@ -291,6 +400,20 @@ POST /api/enrollments/bulk-enroll/
     {"student_id": 1, "subject_id": 1},
     {"student_id": 2, "subject_id": 2}
   ]
+}
+```
+
+#### Reset Student Password (Admin)
+```json
+POST /api/users/students/2/reset_password/
+Authorization: Bearer <admin_token>
+```
+Returns:
+```json
+{
+  "message": "Password reset successfully",
+  "new_password": "xK9mP2vL4nQ8",
+  "user": { ... }
 }
 ```
 

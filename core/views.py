@@ -5,7 +5,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
 
 from .models import Student, Subject, Enrollment, Section
 from .serializers import (
@@ -15,6 +15,20 @@ from .serializers import (
     SectionSerializer,
     EnrollmentSummarySerializer
 )
+
+
+class IsAdminRole(BasePermission):
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        return request.user.is_admin_role or request.user.is_staff
+
+
+class IsStudentRole(BasePermission):
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        return request.user.is_student_role
 
 
 class StudentViewSet(viewsets.ModelViewSet):
@@ -29,13 +43,15 @@ class StudentViewSet(viewsets.ModelViewSet):
     """
     queryset = Student.objects.all()
     serializer_class = StudentSerializer
+    permission_classes = [IsAdminRole]
+
+    def get_permissions(self):
+        if self.action == 'list' or self.action == 'retrieve':
+            return [IsAdminRole()]
+        return [IsAdminRole()]
 
     @action(detail=True, methods=['get'])
     def enrollment_summary(self, request, pk=None):
-        """
-        Get enrollment summary for a specific student.
-        Returns student details, enrolled subjects, total units, and section info.
-        """
         student = self.get_object()
         summary = student.get_enrollment_summary()
         
@@ -58,7 +74,7 @@ class SubjectViewSet(viewsets.ModelViewSet):
     ViewSet for Subject management.
     
     Endpoints:
-    - GET /api/subjects/ - List all subjects (with optional course/year_level filters)
+    - GET /api/subjects/ - List all subjects
     - POST /api/subjects/ - Create new subject
     - GET /api/subjects/{id}/ - Retrieve subject details
     - GET /api/subjects/{id}/sections/ - Get all sections for subject
@@ -66,8 +82,12 @@ class SubjectViewSet(viewsets.ModelViewSet):
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
 
+    def get_permissions(self):
+        if self.request.method in ['GET']:
+            return [IsAuthenticated()]
+        return [IsAdminRole()]
+
     def get_queryset(self):
-        """Filter subjects by course and year_level if provided"""
         queryset = Subject.objects.all()
         course = self.request.query_params.get('course', None)
         year_level = self.request.query_params.get('year_level', None)
@@ -81,7 +101,6 @@ class SubjectViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def sections(self, request, pk=None):
-        """Get all sections for a specific subject"""
         subject = self.get_object()
         sections = subject.sections.all()
         serializer = SectionSerializer(sections, many=True)
@@ -101,9 +120,13 @@ class SectionViewSet(viewsets.ModelViewSet):
     queryset = Section.objects.all()
     serializer_class = SectionSerializer
 
+    def get_permissions(self):
+        if self.request.method in ['GET']:
+            return [IsAuthenticated()]
+        return [IsAdminRole()]
+
     @action(detail=True, methods=['get'])
     def enrolled_students(self, request, pk=None):
-        """Get list of enrolled students in a section"""
         section = self.get_object()
         enrollments = Enrollment.objects.filter(
             section=section,
@@ -124,17 +147,18 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
     ViewSet for Enrollment management with automatic section assignment.
     
     Endpoints:
-    - GET /api/enrollments/ - List all enrollments
-    - POST /api/enrollments/ - Enroll student (with auto section assignment)
-    - PATCH /api/enrollments/{id}/ - Update enrollment (change status, etc.)
+    - GET /api/enrollments/ - List all enrollments (admin) or own enrollments (student)
+    - POST /api/enrollments/ - Enroll student (admin only)
+    - PATCH /api/enrollments/{id}/ - Update enrollment
     - DELETE /api/enrollments/{id}/ - Drop enrollment
-    - POST /api/enrollments/bulk-enroll/ - Bulk enroll students
+    - POST /api/enrollments/bulk-enroll/ - Bulk enroll students (admin only)
+    - GET /api/enrollments/my-enrollments/ - Get current user's enrollments (student)
     
     POST Body Example for single enrollment:
     {
         "student_id_write": 1,
         "subject_id_write": 2,
-        "section_id_write": 3  // Optional - will auto-assign if not provided
+        "section_id_write": 3
     }
     
     POST Body Example for bulk enrollment:
@@ -147,13 +171,50 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
     """
     queryset = Enrollment.objects.select_related('student', 'subject', 'section')
     serializer_class = EnrollmentSerializer
-    permission_classes = [AllowAny]
+
+    def get_permissions(self):
+        if self.request.method in ['GET']:
+            return [IsAuthenticated()]
+        return [IsAdminRole()]
+
+    def get_queryset(self):
+        queryset = Enrollment.objects.select_related('student', 'subject', 'section')
+        
+        if hasattr(self.request, 'user') and self.request.user.is_authenticated:
+            if self.request.user.is_student_role and not self.request.user.is_admin_role:
+                if self.request.user.student:
+                    queryset = queryset.filter(student=self.request.user.student)
+        
+        return queryset
+
+    @action(detail=False, methods=['get'])
+    def my_enrollments(self, request):
+        """Get enrollments for the logged-in student user"""
+        if not request.user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        if not request.user.student:
+            return Response(
+                {'error': 'No linked student account. Please contact administrator.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        enrollments = Enrollment.objects.filter(
+            student=request.user.student,
+            status='enrolled'
+        ).select_related('subject', 'section')
+        
+        data = {
+            'student': StudentSerializer(request.user.student).data,
+            'enrollments': EnrollmentSerializer(enrollments, many=True).data,
+            'total_units': request.user.student.get_total_units(),
+            'total_subjects': enrollments.count()
+        }
+        return Response(data)
 
     def create(self, request, *args, **kwargs):
-        """Create enrollment with automatic section assignment and validation"""
         data = request.data.copy()
         
-        # Handle renaming of fields for consistency
         if 'student_id' in data and 'student_id_write' not in data:
             data['student_id_write'] = data.pop('student_id')
         if 'subject_id' in data and 'subject_id_write' not in data:
@@ -174,17 +235,6 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def bulk_enroll(self, request):
-        """
-        Bulk enroll multiple students in subjects.
-        
-        POST Body:
-        {
-            "enrollments": [
-                {"student_id": 1, "subject_id": 2},
-                {"student_id": 2, "subject_id": 3}
-            ]
-        }
-        """
         enrollments_data = request.data.get('enrollments', [])
         
         if not enrollments_data:
@@ -202,11 +252,9 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
                 subject_id = enrollment_data.get('subject_id')
                 section_id = enrollment_data.get('section_id')
 
-                # Validate student and subject exist
                 student = get_object_or_404(Student, id=student_id)
                 subject = get_object_or_404(Subject, id=subject_id)
 
-                # Check for duplicate enrollment
                 if Enrollment.objects.filter(
                     student=student,
                     subject=subject,
@@ -219,7 +267,6 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
                     })
                     continue
 
-                # Auto-assign section if not provided
                 if not section_id:
                     available_section = next(
                         (s for s in subject.sections.all() if s.has_available_capacity()),
@@ -243,7 +290,6 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
                         })
                         continue
 
-                # Create enrollment
                 enrollment = Enrollment.objects.create(
                     student_id=student_id,
                     subject_id=subject_id,
@@ -272,11 +318,6 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def drop(self, request, pk=None):
-        """
-        Drop an enrollment (mark as dropped).
-        
-        POST endpoint with no body required.
-        """
         enrollment = self.get_object()
         if enrollment.status == 'dropped':
             return Response(
@@ -293,4 +334,3 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_200_OK
         )
-

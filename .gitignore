@@ -25,3 +25,13 @@ yarn.lock
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Misc
+*.bak
+*.swp
+*AGENTS.md
+*session-ses_2399.md
