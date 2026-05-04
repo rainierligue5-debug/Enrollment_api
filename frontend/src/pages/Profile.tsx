@@ -35,7 +35,7 @@ const Profile: React.FC = () => {
         confirmPassword: '',
       });
       if (userData.profile_picture) {
-        setPreviewUrl(userData.profile_picture);
+        setPreviewUrl(`http://127.0.0.1:8000${userData.profile_picture}`);
       }
     } catch (err) {
       setMessage({ type: 'error', text: 'Failed to load profile data' });

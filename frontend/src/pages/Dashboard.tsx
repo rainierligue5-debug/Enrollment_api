@@ -134,7 +134,7 @@ const Dashboard: React.FC = () => {
               <div className="flex items-center gap-3">
                 {currentUser.profile_picture ? (
                   <img 
-                    src={currentUser.profile_picture} 
+                    src={`http://127.0.0.1:8000${currentUser.profile_picture}`} 
                     alt="Profile" 
                     className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
                   />
