@@ -1,0 +1,37 @@
+﻿# Python / Django
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.env
+*.sqlite3
+db.sqlite3
+local_settings.py
+venv/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+package-lock.json
+yarn.lock
+/dist
+/build
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Misc
+*.bak
+*.swp
+*AGENTS.md
+*session-ses_2399.md
