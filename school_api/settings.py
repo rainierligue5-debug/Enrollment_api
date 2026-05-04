@@ -44,8 +44,11 @@ INSTALLED_APPS = [
     'user',
     'djoser',
     'corsheaders',
+<<<<<<< HEAD
     'cloudinary_storage',
     'cloudinary',
+=======
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
 ]
 
 MIDDLEWARE = [
@@ -64,7 +67,11 @@ ROOT_URLCONF = 'school_api.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
+<<<<<<< HEAD
         'DIRS': [BASE_DIR / 'templates'],
+=======
+        'DIRS': [],
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -154,6 +161,7 @@ DJOSER = {
         'user_create': 'user.serializers.UserCreateSerializer',
         'user': 'user.serializers.UserSerializer',
     },
+<<<<<<< HEAD
     'EMAIL': {
         'activation': 'user.email.CustomActivationEmail',
     },
@@ -198,3 +206,6 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # Local file storage for development
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+=======
+}
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed

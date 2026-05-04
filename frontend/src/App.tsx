@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from "./pages/Login";
@@ -103,3 +104,8 @@ function App() {
 
 export default App;
 
+=======
+import Login from "./pages/Login";
+
+export default Login;
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed

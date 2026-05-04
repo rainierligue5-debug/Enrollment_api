@@ -35,7 +35,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=255)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='student')
+<<<<<<< HEAD
     profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
+=======
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
     student = models.OneToOneField(
         Student, 
         on_delete=models.SET_NULL, 

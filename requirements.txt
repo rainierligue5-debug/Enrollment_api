@@ -2,7 +2,12 @@ asgiref==3.8.1
 Django==5.2.12
 djangorestframework==3.15.2
 djoser==2.2.3
+<<<<<<< HEAD
 sqlparse==0.5.5
+=======
+django-cors-headers==4.6.0
+sqlparse==0.5.13.11.1
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
 attrs==22.2.0
 certifi==2026.2.25
 cffi==2.0.0
@@ -12,7 +17,13 @@ cryptography==46.0.5
 defusedxml==0.7.1
 Django==5.2.12
 django-cors-headers==4.9.0
+<<<<<<< HEAD
 djangorestframework_simplejwt==5.5.1
+=======
+djangorestframework==3.16.1
+djangorestframework_simplejwt==5.5.1
+djoser==2.3.3
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
 idna==3.11
 iniconfig==2.0.0
 mysql-connector-python==8.0.33
@@ -34,7 +45,10 @@ sqlparse==0.5.5
 typing_extensions==4.15.0
 tzdata==2025.3
 urllib3==2.6.3
+<<<<<<< HEAD
 cloudinary==1.40.0
 django-cloudinary-storage==0.3.0
 Pillow==10.3.0
 python-dotenv==1.0.1
+=======
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed

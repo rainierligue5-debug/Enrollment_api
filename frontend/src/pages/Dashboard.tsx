@@ -1,9 +1,14 @@
 // src/pages/Dashboard.tsx
 import React, { useState, useEffect } from "react";
+<<<<<<< HEAD
 import { Users, BookOpen, Grid3x3, TrendingUp, AlertCircle, LogOut, User, UserCircle, Camera, RefreshCw, UserPlus, BookPlus, LayoutGrid, Users2, GraduationCap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getStudents, getSubjects, getSections, getEnrollments, logout, getCurrentUser, getStoredUser } from "../api";
 import { User as UserType } from "../type";
+=======
+import { Users, BookOpen, Grid3x3, TrendingUp, AlertCircle } from "lucide-react";
+import { getStudents, getSubjects, getSections, getEnrollments } from "../api";
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
 
 interface StatCard {
   label: string;
@@ -14,13 +19,17 @@ interface StatCard {
 }
 
 const Dashboard: React.FC = () => {
+<<<<<<< HEAD
   const navigate = useNavigate();
+=======
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
   const [stats, setStats] = useState({
     totalStudents: 0,
     totalSubjects: 0,
     totalSections: 0,
     totalEnrollments: 0,
   });
+<<<<<<< HEAD
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +58,18 @@ const Dashboard: React.FC = () => {
   const fetchStats = async () => {
     try {
       setStatsLoading(true);
+=======
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
       const [students, subjects, sections, enrollments] = await Promise.all([
         getStudents(),
         getSubjects(),
@@ -66,6 +87,7 @@ const Dashboard: React.FC = () => {
       setError("Failed to fetch dashboard data");
       console.error(err);
     } finally {
+<<<<<<< HEAD
       setStatsLoading(false);
     }
   };
@@ -79,6 +101,12 @@ const Dashboard: React.FC = () => {
     navigate('/');
   };
 
+=======
+      setLoading(false);
+    }
+  };
+
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
   const statCards: StatCard[] = [
     {
       label: "Total Students",
@@ -98,7 +126,11 @@ const Dashboard: React.FC = () => {
       label: "Sections",
       value: stats.totalSections,
       icon: <Grid3x3 size={24} />,
+<<<<<<< HEAD
       trend: `${stats.totalSections} total`,
+=======
+      trend: "12 total",
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
       color: "from-green-500 to-green-600",
     },
     {
@@ -120,6 +152,7 @@ const Dashboard: React.FC = () => {
   }
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation Bar */}
       <div className="bg-white shadow-sm border-b border-gray-200">
@@ -280,6 +313,40 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+=======
+    <div className="space-y-8">
+      {/* Welcome Section */}
+      <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-2xl p-8 shadow-lg">
+        <h2 className="text-3xl font-bold mb-2">Welcome to Enrollment System</h2>
+        <p className="text-slate-300 text-lg">
+          Manage students, subjects, sections, and enrollments efficiently
+        </p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {statCards.map((card, index) => (
+          <div key={index} className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow">
+            <div className={`bg-gradient-to-br ${card.color} text-white p-6 rounded-t-xl`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium opacity-90">{card.label}</p>
+                  <p className="text-4xl font-bold mt-2">{card.value}</p>
+                </div>
+                <div className="opacity-20">{card.icon}</div>
+              </div>
+            </div>
+            <div className="p-4 text-sm text-slate-600 border-t border-gray-100">
+              <p className="flex items-center gap-2">
+                <TrendingUp size={14} className="text-green-500" />
+                {card.trend}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
     </div>
   );
 };
