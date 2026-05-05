@@ -12,6 +12,8 @@ import {
   User,
   AuthResponse,
   MyEnrollmentsResponse,
+  RegistrationData,
+  AdminRegistrationData,
 } from "./type";
 
 const API: AxiosInstance = axios.create({ baseURL: "http://127.0.0.1:8000/api/" });
@@ -181,6 +183,49 @@ export const deleteStudentUser = async (id: number): Promise<void> => {
 export const resetStudentPassword = async (id: number): Promise<{ new_password: string; user: User }> => {
   const res = await API.post(`users/students/${id}/reset-password`);
   return res.data;
+};
+
+// ============== REGISTRATION & ACTIVATION ==============
+
+export const registerStudent = async (data: RegistrationData): Promise<{ message: string; user: { email: string; name: string } }> => {
+  const res = await API.post("auth/register/", data);
+  return res.data;
+};
+
+export const registerAdmin = async (data: AdminRegistrationData): Promise<{ message: string; user: { email: string; name: string } }> => {
+  const formData = new FormData();
+  formData.append('name', data.name);
+  formData.append('email', data.email);
+  formData.append('password', data.password);
+  formData.append('re_password', data.re_password);
+  if (data.admin_image) {
+    formData.append('admin_image', data.admin_image);
+  }
+  const res = await API.post("auth/register-admin/", formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return res.data;
+};
+
+export const activateAccount = async (uid: string, token: string): Promise<{ message: string }> => {
+  const res = await API.post("auth/users/activation/", { uid, token });
+  return res.data;
+};
+
+export const resendActivation = async (email: string): Promise<{ message: string }> => {
+  const res = await API.post("auth/users/resend_activation/", { email });
+  return res.data;
+};
+
+export const requestPasswordReset = async (email: string): Promise<{ message: string }> => {
+  const res = await API.post("auth/users/reset_password/", { email });
+  return res.data;
+};
+
+export const confirmPasswordReset = async (uid: string, token: string, new_password: string, re_new_password: string): Promise<void> => {
+  await API.post("auth/users/reset_password_confirm/", { uid, token, new_password, re_new_password });
 };
 
 export const isAuthenticated = (): boolean => {

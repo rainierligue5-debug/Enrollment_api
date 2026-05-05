@@ -1,15 +1,22 @@
 from django.contrib.auth import get_user_model
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import UserSerializer, UserCreateSerializer, LoginSerializer, AdminUserSerializer, generate_temp_password
+from .serializers import UserSerializer, UserCreateSerializer, LoginSerializer, AdminUserSerializer, StudentRegistrationSerializer, AdminRegistrationSerializer, generate_temp_password
 from core.models import Student
 
 User = get_user_model()
 
 
+@csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login(request):
@@ -35,8 +42,8 @@ def login(request):
     
     if not user.is_active:
         return Response(
-            {'error': 'User account is disabled'},
-            status=status.HTTP_401_UNAUTHORIZED
+            {'error': 'User account is not activated yet. Please check your email for the activation link.'},
+            status=status.HTTP_403_FORBIDDEN
         )
     
     refresh = RefreshToken.for_user(user)
@@ -48,6 +55,7 @@ def login(request):
     })
 
 
+@csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def logout(request):
@@ -188,7 +196,6 @@ def student_user_detail(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def reset_student_password(request, pk):
-    """Admin: Reset student user password and return the new password"""
     if not request.user.is_admin_role:
         return Response(
             {'error': 'Permission denied. Admin access required.'},
@@ -212,3 +219,127 @@ def reset_student_password(request, pk):
         'new_password': new_password,
         'user': AdminUserSerializer(user).data
     })
+
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_student(request):
+    serializer = StudentRegistrationSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    
+    data = serializer.validated_data
+    
+    student = Student.objects.create(
+        student_id=data['student_id'],
+        name=data['name'],
+        email=data['email'],
+        course=data['course'],
+        year_level=data['year_level'],
+        age=data.get('age')
+    )
+    
+    user = User.objects.create(
+        email=data['email'],
+        name=data['name'],
+        role='student',
+        student=student,
+        is_active=False,
+    )
+    
+    user.set_password(data['password'])
+    user.save()
+    
+    activation_uid = force_str(urlsafe_base64_encode(force_bytes(user.pk)))
+    token = default_token_generator.make_token(user)
+    activation_link = f"{settings.DJOSER['ACTIVATION_URL'].replace('{uid}', activation_uid).replace('{token}', token)}"
+    
+    email_subject = 'Activate Your Student Account'
+    email_body = f"""
+    Hello {user.name},
+
+    Welcome! Please click the link below to activate your student account:
+
+    {activation_link}
+
+    If you did not request this, please ignore this email.
+
+    Thank you,
+    USTP Enrollment System
+    """
+    
+    send_mail(
+        email_subject,
+        email_body,
+        settings.DEFAULT_FROM_EMAIL,
+        [user.email],
+        fail_silently=False,
+    )
+    
+    return Response({
+        'message': 'Registration successful. Please check your email to activate your account.',
+        'user': {
+            'email': user.email,
+            'name': user.name,
+        },
+    }, status=status.HTTP_201_CREATED)
+
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_admin(request):
+    serializer = AdminRegistrationSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    
+    data = serializer.validated_data
+    
+    admin_image = request.FILES.get('admin_image')
+    
+    user = User.objects.create(
+        email=data['email'],
+        name=data['name'],
+        is_active=False,
+        role='admin',
+    )
+    
+    user.set_password(data['password'])
+    
+    if admin_image:
+        user.admin_image = admin_image
+    
+    user.save()
+    
+    activation_uid = force_str(urlsafe_base64_encode(force_bytes(user.pk)))
+    token = default_token_generator.make_token(user)
+    activation_link = f"{settings.DJOSER['ACTIVATION_URL'].replace('{uid}', activation_uid).replace('{token}', token)}"
+    
+    email_subject = 'Activate Your Admin Account'
+    email_body = f"""
+    Hello {user.name},
+
+    Welcome! Please click the link below to activate your admin account:
+
+    {activation_link}
+
+    If you did not request this, please ignore this email.
+
+    Thank you,
+    USTP Enrollment System
+    """
+    
+    send_mail(
+        email_subject,
+        email_body,
+        settings.DEFAULT_FROM_EMAIL,
+        [user.email],
+        fail_silently=False,
+    )
+    
+    return Response({
+        'message': 'Admin registration successful. Please check your email to activate your account.',
+        'user': {
+            'email': user.email,
+            'name': user.name,
+        },
+    }, status=status.HTTP_201_CREATED)

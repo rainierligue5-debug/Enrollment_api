@@ -14,57 +14,241 @@ This system enables educational institutions to efficiently manage student enrol
 - ✅ **Bulk Enrollment**: Process multiple enrollments simultaneously
 - ✅ **Capacity Control**: Enforce maximum students per section
 - ✅ **Enrollment Summary**: Track student progress and unit calculations
+- ✅ **Email Activation**: Self-registered accounts require email verification before login
+- ✅ **Admin Registration with Image Upload**: Admins can self-register with Cloudinary-hosted profile images
+- ✅ **Password Reset**: Users can request password reset via email
+- ✅ **Role-Based Access**: Separate Admin and Student portals with protected routes
 
-## 🏗️ Architecture & Technology Stack
+### Backend Dependencies
+- **cloudinary** + **django-cloudinary-storage**: Cloud-based media storage for admin profile images
+- **Pillow**: Image processing for Django ImageField
+- **djoser**: Authentication endpoints (login, activation, password reset)
+- **djangorestframework-simplejwt**: JWT token authentication
+- **python-dotenv**: Environment variable loading from `.env`
 
-### Backend (Django REST Framework)
-- **Framework**: Django 5.2.12 with Django REST Framework
-- **Database**: SQLite3 (development) / PostgreSQL (production)
-- **Authentication**: Session-based with CORS support
-- **API**: RESTful endpoints with automatic URL generation
+### Frontend Dependencies
+- **lucide-react**: Icon library for UI components
+- **react-router-dom**: Client-side routing with protected routes
 
-### Frontend (React)
-- **Framework**: React 18.2.0 with TypeScript
-- **HTTP Client**: Axios 1.4.0
-- **Styling**: Tailwind CSS
-- **Build Tool**: Create React App (react-scripts 5.0.1)
+### 📧 Authentication & Account Features
 
-### Key Design Patterns
-- **Model-ViewSet Architecture**: DRF ViewSets for consistent API patterns
-- **Automatic Section Assignment**: Smart enrollment with capacity-aware section selection
-- **Validation at Multiple Layers**: Model-level, serializer-level, and view-level validation
-- **Optimistic UI Updates**: Frontend state management with server synchronization
+#### Role-Based Registration
 
-## 🚀 Quick Start Guide
+| Feature | Student | Admin |
+|---------|---------|-------|
+| Self-Registration | ✅ `/register` (toggle "Student") | ✅ `/register` (toggle "Admin") |
+| Email Activation | ✅ Required | ✅ Required |
+| Profile Image | ❌ | ✅ Optional (Cloudinary) |
+| Student ID Required | ✅ | ❌ |
+| Course/Year Required | ✅ | ❌ |
 
-### Prerequisites
-- Python 3.8+ with pip
-- Node.js 16+ with npm
-- Git
+#### Email Activation Flow
 
-### Backend Setup
+```
+User registers via /register (Student or Admin toggle)
+         ↓
+Backend creates User (is_active=False) + Student record (if student)
+         ↓
+Activation email sent with link (or printed to console if SMTP not configured)
+         ↓
+User clicks: http://localhost:3000/activate/{uid}/{token}
+         ↓
+Account activated (is_active=True) → redirected to Login
+```
+
+> **Note**: If SMTP credentials are placeholders, activation links are printed to the Django console. Check the terminal running `python manage.py runserver`.
+
+#### Password Reset Flow
+
+```
+User visits /password-reset → enters email
+         ↓
+Reset email sent with link (or printed to console)
+         ↓
+User clicks: http://localhost:3000/password-reset/confirm/{uid}/{token}
+         ↓
+User sets new password → redirected to Login
+```
+
+#### Resend Activation
+
+```
+User visits /activate (without valid link) → enters email
+         ↓
+New activation email sent (or printed to console)
+```
+
+### 🖼️ Cloudinary Setup
+
+Admin profile images are uploaded to Cloudinary. Configure your credentials in `.env`:
+
+```env
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
+
+Sign up at https://cloudinary.com to get free tier credentials.
+
+### 🔐 Admin Password Management
+
+Admins can manage student user accounts and reset passwords:
 
 ```bash
-# Navigate to project directory
-cd Enrollment_api
+# Reset password for student user ID 2
+POST /api/users/students/2/reset-password/
+Authorization: Bearer <admin_token>
 
-# Create virtual environment
-python -m venv venv
-venv\Scripts\activate  # Windows 
-#run if necessary Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass 
-# source venv/bin/activate  # Linux/Mac
+# Returns:
+{
+  "message": "Password reset successfully",
+  "new_password": "xK9mP2vL4nQ8",
+  "user": { ... }
+}
+```
 
-# Install dependencies
-pip install -r requirements.txt
+## 🔐 Authentication & User Roles
 
-# Run migrations
-python manage.py migrate
+### User Roles
+- **Administrator** (`admin`): Full CRUD access to all endpoints (students, subjects, sections, enrollments, user management)
+- **Student** (`student`): View-only access to their own enrollments and subjects/sections
 
-# Load sample data (optional)
-python manage.py populate_sample_data
+### Custom User Model
 
-# Start development server
-python manage.py runserver
+The system uses a custom `User` model (`user.User`) instead of Django's default `auth.User`:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `email` | EmailField (unique) | Login identifier |
+| `name` | CharField | Display name |
+| `role` | CharField | `admin` or `student` |
+| `student` | OneToOneField (nullable) | Linked Student record |
+| `admin_image` | ImageField (nullable) | Admin profile image (Cloudinary) |
+| `is_active` | BooleanField | Account activation status |
+| `is_staff` | BooleanField | Django admin access |
+| `date_joined` | DateTimeField | Account creation timestamp |
+
+### Login Endpoint
+```
+POST /api/auth/login/
+Content-Type: application/json
+
+{
+  "email": "admin@admin.edu",
+  "password": "admin123"
+}
+```
+
+**Response:**
+```json
+{
+  "access": "eyJ...",
+  "refresh": "eyJ...",
+  "user": {
+    "id": 1,
+    "email": "admin@admin.edu",
+    "name": "System Administrator",
+    "role": "admin",
+    "student": null,
+    "admin_image": null,
+    "is_active": true
+  }
+}
+```
+
+### Student Self-Registration (Public)
+```
+POST /api/auth/register/
+Content-Type: application/json
+
+{
+  "student_id": "2024001",
+  "name": "New Student",
+  "email": "newstudent@ustp.edu",
+  "course": "Computer Science",
+  "year_level": "1st",
+  "age": 18,
+  "password": "mypassword123",
+  "re_password": "mypassword123"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Registration successful. Please check your email to activate your account.",
+  "user": {
+    "email": "newstudent@ustp.edu",
+    "name": "New Student"
+  }
+}
+```
+
+### Admin Self-Registration with Image Upload (Public)
+```
+POST /api/auth/register-admin/
+Content-Type: multipart/form-data
+
+name: "Admin Name"
+email: "admin@example.com"
+password: "securepassword123"
+re_password: "securepassword123"
+admin_image: <file>  (optional)
+```
+
+**Response:**
+```json
+{
+  "message": "Admin registration successful. Please check your email to activate your account.",
+  "user": {
+    "email": "admin@example.com",
+    "name": "Admin Name"
+  }
+}
+```
+
+### Email Activation (Public)
+```
+POST /api/auth/users/activation/
+Content-Type: application/json
+
+{
+  "uid": "encoded_uid",
+  "token": "activation_token"
+}
+```
+
+### Resend Activation Email (Public)
+```
+POST /api/auth/users/resend_activation/
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+### Password Reset Request (Public)
+```
+POST /api/auth/users/reset_password/
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+### Password Reset Confirm (Public)
+```
+POST /api/auth/users/reset_password_confirm/
+Content-Type: application/json
+
+{
+  "uid": "encoded_uid",
+  "token": "reset_token",
+  "new_password": "newpassword123",
+  "re_new_password": "newpassword123"
+}
 ```
 
 **Backend URL**: http://127.0.0.1:8000
@@ -83,6 +267,55 @@ npm start
 ```
 
 **Frontend URL**: http://localhost:3000
+
+### 🔐 Email & SMTP Setup (Required for Activation)
+
+The system uses email activation for self-registered students. To enable email sending:
+
+#### Option 1: Gmail SMTP (Recommended)
+
+1. **Enable 2-Step Verification** on your Google account: https://myaccount.google.com/security
+2. **Generate an App Password**:
+   - Go to https://myaccount.google.com/apppasswords
+   - Select **Mail** as the app and your device
+   - Click **Generate** and copy the 16-character password
+3. **Edit `.env`** with your credentials:
+   ```env
+   EMAIL_HOST=smtp.gmail.com
+   EMAIL_PORT=587
+   EMAIL_USE_TLS=True
+   EMAIL_HOST_USER=your-email@gmail.com
+   EMAIL_HOST_PASSWORD=abcdefghijklmnop
+   DEFAULT_FROM_EMAIL=your-email@gmail.com
+   ```
+
+#### Option 2: Other SMTP Providers
+
+| Provider | Host | Port | Notes |
+|----------|------|------|-------|
+| Outlook/Hotmail | smtp-mail.outlook.com | 587 | Use your account password |
+| Yahoo | smtp.mail.yahoo.com | 587 | Use an App Password |
+| SendGrid | smtp.sendgrid.net | 587 | API key as password |
+
+#### Option 3: Console Backend (Development Only)
+
+If no SMTP credentials are configured, emails are printed to the Django console output. This is useful for testing without a real email account. Check the terminal where `python manage.py runserver` is running to see activation links.
+
+### 📧 Email Activation Flow
+
+```
+Student registers via /register
+        ↓
+Backend creates Student + User (is_active=False)
+        ↓
+Activation email sent with link
+        ↓
+Student clicks: http://localhost:3000/activate/{uid}/{token}
+        ↓
+Account activated + auto-login → redirected to /student
+```
+
+**Admin-created accounts**: Accounts created by admins through "Student Accounts" are immediately active — no email activation required.
 
 ## 📋 System Walkthrough & Features Guide
 
@@ -220,6 +453,67 @@ Content-Type: application/json
 }
 ```
 
+### Student Registration (Public)
+```
+POST /api/auth/register/
+Content-Type: application/json
+
+{
+  "student_id": "2024001",
+  "name": "New Student",
+  "email": "newstudent@ustp.edu",
+  "course": "Computer Science",
+  "year_level": "1st",
+  "age": 18,
+  "password": "mypassword123",
+  "re_password": "mypassword123"
+}
+```
+
+### Email Activation
+```
+POST /api/auth/users/activation/
+Content-Type: application/json
+
+{
+  "uid": "encoded_uid",
+  "token": "activation_token"
+}
+```
+
+### Resend Activation Email
+```
+POST /api/auth/users/resend_activation/
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+### Password Reset Request
+```
+POST /api/auth/users/reset_password/
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+### Password Reset Confirm
+```
+POST /api/auth/users/reset_password_confirm/
+Content-Type: application/json
+
+{
+  "uid": "encoded_uid",
+  "token": "reset_token",
+  "new_password": "newpassword123",
+  "re_new_password": "newpassword123"
+}
+```
+
 ### Get Current User
 ```
 GET /api/auth/me/
@@ -313,7 +607,14 @@ POST   /api/enrollments/{id}/drop/       # Drop enrollment
 | **Authentication** | | | |
 | POST /api/auth/login/ | ✓ | ✓ | ✓ |
 | POST /api/auth/logout/ | ✓ | ✓ | ✓ |
+| POST /api/auth/register/ | ✗ | ✗ | ✓ (Student registration) |
+| POST /api/auth/register-admin/ | ✗ | ✗ | ✓ (Admin registration + image) |
+| POST /api/auth/users/activation/ | ✗ | ✗ | ✓ |
+| POST /api/auth/users/resend_activation/ | ✗ | ✗ | ✓ |
+| POST /api/auth/users/reset_password/ | ✗ | ✗ | ✓ |
+| POST /api/auth/users/reset_password_confirm/ | ✗ | ✗ | ✓ |
 | GET /api/auth/me/ | ✓ | ✓ | ✗ |
+| PATCH /api/auth/me/ | ✓ | ✓ | ✗ |
 | **Students** | | | |
 | GET /api/students/ | ✓ | ✗ | ✗ |
 | POST /api/students/ | ✓ | ✗ | ✗ |
@@ -343,6 +644,33 @@ POST   /api/enrollments/{id}/drop/       # Drop enrollment
 | POST /api/users/students/{id}/reset_password/ | ✓ | ✗ | ✗ |
 
 ### Sample API Requests
+
+#### Self-Registration (Student)
+```json
+POST /api/auth/register/
+{
+  "student_id": "2024001",
+  "name": "Jane Smith",
+  "email": "jane@ustp.edu",
+  "course": "Computer Science",
+  "year_level": "1st",
+  "age": 18,
+  "password": "mypassword123",
+  "re_password": "mypassword123"
+}
+```
+
+#### Self-Registration (Admin with Image)
+```
+POST /api/auth/register-admin/
+Content-Type: multipart/form-data
+
+name: "Admin User"
+email: "admin@example.com"
+password: "securepass123"
+re_password: "securepass123"
+admin_image: <image_file>  (optional)
+```
 
 #### Create Student
 ```json
@@ -492,6 +820,16 @@ This creates:
 5. **Status Changes**: Test enrollment status transitions
 
 ## 📊 Database Schema
+
+### User Model
+- `email` (EmailField, unique): User email (login identifier)
+- `name` (CharField): Full name
+- `role` (CharField): `admin` or `student`
+- `student` (OneToOneField, nullable): Linked Student record
+- `admin_image` (ImageField, nullable): Admin profile image (Cloudinary)
+- `is_active` (BooleanField): Account activation status (False until email activated)
+- `is_staff` (BooleanField): Django admin access
+- `date_joined` (DateTimeField): Account creation timestamp
 
 ### Student Model
 - `student_id` (CharField, unique): Unique student identifier

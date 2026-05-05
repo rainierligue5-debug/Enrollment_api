@@ -127,3 +127,22 @@ export interface MyEnrollmentsResponse {
   total_units: number;
   total_subjects: number;
 }
+
+export interface RegistrationData {
+  student_id: string;
+  name: string;
+  email: string;
+  course: string;
+  year_level: string;
+  age?: number | null;
+  password: string;
+  re_password: string;
+}
+
+export interface AdminRegistrationData {
+  name: string;
+  email: string;
+  password: string;
+  re_password: string;
+  admin_image: File | null;
+}

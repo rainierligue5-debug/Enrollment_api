@@ -9,27 +9,14 @@ User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
-<<<<<<< HEAD
-    role = serializers.SerializerMethodField()
-=======
->>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
     student_id = serializers.SerializerMethodField()
     student_info = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-<<<<<<< HEAD
-        fields = ['id', 'email', 'name', 'role', 'profile_picture', 'student', 'student_id', 'student_info', 'is_active', 'date_joined']
+        fields = ['id', 'email', 'name', 'role', 'student', 'student_id', 'student_info', 'is_active', 'date_joined', 'admin_image']
         read_only_fields = ['id', 'date_joined']
 
-    def get_role(self, obj):
-        return obj.role
-
-=======
-        fields = ['id', 'email', 'name', 'role', 'student', 'student_id', 'student_info', 'is_active', 'date_joined']
-        read_only_fields = ['id', 'date_joined']
-
->>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
     def get_student_id(self, obj):
         if obj.student:
             return obj.student.student_id
@@ -56,7 +43,7 @@ class AdminUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'name', 'role', 'student', 'student_id', 'student_info', 'is_active', 'date_joined', 'temp_password']
+        fields = ['id', 'email', 'name', 'role', 'student', 'student_id', 'student_info', 'is_active', 'date_joined', 'temp_password', 'admin_image']
         read_only_fields = ['id', 'date_joined']
 
     def get_student_id(self, obj):
@@ -86,11 +73,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-<<<<<<< HEAD
-        fields = ['id', 'email', 'name', 'password', 'role', 'profile_picture', 'student', 'student_id']
-=======
         fields = ['id', 'email', 'name', 'password', 'role', 'student', 'student_id']
->>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
         read_only_fields = ['id']
 
     def create(self, validated_data):
@@ -103,29 +86,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
                 student = Student.objects.get(student_id=student_id)
             except Student.DoesNotExist:
                 pass
-<<<<<<< HEAD
-        else:
-            # Try to auto-link by email if no student_id provided
-            try:
-                student = Student.objects.get(email=validated_data.get('email'))
-            except Student.DoesNotExist:
-                pass
-        
-        # NEW: Auto-create Student if role=student and no student found
-        import secrets
-        role = validated_data.get('role', 'student')
-        if role == 'student' and not student:
-            student_id = f"STU{secrets.randbelow(1000000):06d}"
-            student = Student.objects.create(
-                student_id=student_id,
-                name=validated_data['name'],
-                email=validated_data['email'],
-                course="Undecided", 
-                year_level="1st"
-            )
-            print(f"AUTO-CREATED Student {student.student_id} for {validated_data['email']}")
-=======
->>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
         
         user = User(**validated_data)
         if password:
@@ -145,6 +105,55 @@ class LoginSerializer(serializers.Serializer):
 
 
 def generate_temp_password(length=12):
-    """Generate a random password"""
     alphabet = string.ascii_letters + string.digits
     return ''.join(secrets.choice(alphabet) for _ in range(length))
+
+
+class StudentRegistrationSerializer(serializers.Serializer):
+    student_id = serializers.CharField(max_length=20)
+    name = serializers.CharField(max_length=100)
+    email = serializers.EmailField()
+    course = serializers.CharField(max_length=100)
+    year_level = serializers.ChoiceField(choices=[
+        ('1st', '1st Year'),
+        ('2nd', '2nd Year'),
+        ('3rd', '3rd Year'),
+        ('4th', '4th Year'),
+    ])
+    age = serializers.IntegerField(required=False, allow_null=True)
+    password = serializers.CharField(write_only=True)
+    re_password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        if data['password'] != data['re_password']:
+            raise serializers.ValidationError({'re_password': 'Passwords do not match'})
+        
+        if Student.objects.filter(student_id=data['student_id']).exists():
+            raise serializers.ValidationError({'student_id': 'Student ID already exists'})
+        
+        if Student.objects.filter(email=data['email']).exists():
+            raise serializers.ValidationError({'email': 'Email is already registered as a student'})
+        
+        if User.objects.filter(email=data['email']).exists():
+            raise serializers.ValidationError({'email': 'Email is already in use'})
+        
+        validate_password(data['password'])
+        return data
+
+
+class AdminRegistrationSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
+    email = serializers.EmailField()
+    admin_image = serializers.ImageField(required=False)
+    password = serializers.CharField(write_only=True)
+    re_password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        if data['password'] != data['re_password']:
+            raise serializers.ValidationError({'re_password': 'Passwords do not match'})
+        
+        if User.objects.filter(email=data['email']).exists():
+            raise serializers.ValidationError({'email': 'Email is already in use'})
+        
+        validate_password(data['password'])
+        return data
