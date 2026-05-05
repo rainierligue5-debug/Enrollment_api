@@ -193,11 +193,29 @@ class EnrollmentViewSet(viewsets.ModelViewSet):
         if not request.user.is_authenticated:
             return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
         
+<<<<<<< HEAD
+        if request.user.is_admin_role:
+            return Response({
+                'student': None,
+                'enrollments': [],
+                'total_units': 0,
+                'total_subjects': 0
+            })
+        
+        if not request.user.student:
+            return Response({
+                'student': None,
+                'enrollments': [],
+                'total_units': 0,
+                'total_subjects': 0
+            })
+=======
         if not request.user.student:
             return Response(
                 {'error': 'No linked student account. Please contact administrator.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
         
         enrollments = Enrollment.objects.filter(
             student=request.user.student,

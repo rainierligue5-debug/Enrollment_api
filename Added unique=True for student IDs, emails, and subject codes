@@ -1,0 +1,47 @@
+# enrollment/models.py
+from django.db import models
+
+class Student(models.Model):
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    student_id = models.CharField(max_length=20, unique=True)
+    email = models.EmailField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.student_id} - {self.first_name} {self.last_name}"
+
+class Subject(models.Model):
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=20, unique=True)
+    units = models.PositiveIntegerField()
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+class Section(models.Model):
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='sections')
+    name = models.CharField(max_length=20)
+    schedule = models.CharField(max_length=100)  # e.g., "MWF 8:00-9:00"
+    capacity = models.PositiveIntegerField()
+    room = models.CharField(max_length=50)
+
+    def __str__(self):
+        return f"{self.subject.code} - {self.name}"
+
+    def enrolled_count(self):
+        return self.enrollments.count()
+
+    def has_space(self):
+        return self.enrolled_count() < self.capacity
+
+class Enrollment(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='enrollments')
+    section = models.ForeignKey(Section, on_delete=models.CASCADE, related_name='enrollments')
+    enrolled_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('student', 'section')  # prevent duplicate enrollment
+
+    def __str__(self):
+        return f"{self.student} enrolled in {self.section}"

@@ -78,6 +78,11 @@ def me(request):
         user.email = data['email']
     if 'password' in data and data['password']:
         user.set_password(data['password'])
+<<<<<<< HEAD
+    if 'profile_picture' in request.FILES:
+        user.profile_picture = request.FILES['profile_picture']
+=======
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
     
     user.save()
     return Response(UserSerializer(user).data)

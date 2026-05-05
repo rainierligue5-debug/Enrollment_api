@@ -96,6 +96,11 @@ export interface User {
   email: string;
   name: string;
   role: 'admin' | 'student';
+<<<<<<< HEAD
+  is_staff?: boolean;
+  profile_picture?: string | null;
+=======
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
   student?: number | null;
   student_id?: string | null;
   student_info?: {

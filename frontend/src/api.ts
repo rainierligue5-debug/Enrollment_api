@@ -41,15 +41,78 @@ API.interceptors.response.use(
 // ============== AUTH ==============
 
 export const login = async (email: string, password: string): Promise<AuthResponse> => {
+<<<<<<< HEAD
+  const res = await API.post<AuthResponse>("auth/jwt/create/", { email, password });
+  if (res.data.access) {
+    localStorage.setItem("access_token", res.data.access);
+    localStorage.setItem("refresh_token", res.data.refresh);
+    // Get user info after login
+    const userRes = await API.get<User>("auth/users/me/");
+    localStorage.setItem("user", JSON.stringify(userRes.data));
+    return { ...res.data, user: userRes.data };
+  }
+  return res.data;
+};
+
+export const register = async (data: {
+  email: string;
+  name: string;
+  password: string;
+  re_password: string;
+  profile_picture?: File;
+}): Promise<any> => {
+  const formData = new FormData();
+  formData.append('email', data.email);
+  formData.append('name', data.name);
+  formData.append('password', data.password);
+  formData.append('re_password', data.re_password);
+  formData.append('role', 'student');
+  if (data.profile_picture) {
+    formData.append('profile_picture', data.profile_picture);
+  }
+
+  const res = await API.post("auth/users/", formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return res.data;
+};
+
+export const activateAccount = async (uid: string, token: string): Promise<any> => {
+  const res = await API.post("auth/users/activation/", { uid, token });
+  return res.data;
+};
+
+export const refreshToken = async (): Promise<any> => {
+  const refresh = localStorage.getItem("refresh_token");
+  if (!refresh) throw new Error("No refresh token");
+
+  const res = await API.post("auth/jwt/refresh/", { refresh });
+  if (res.data.access) {
+    localStorage.setItem("access_token", res.data.access);
+=======
   const res = await API.post<AuthResponse>("auth/login/", { email, password });
   if (res.data.access) {
     localStorage.setItem("access_token", res.data.access);
     localStorage.setItem("user", JSON.stringify(res.data.user));
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
   }
   return res.data;
 };
 
 export const logout = async (): Promise<void> => {
+<<<<<<< HEAD
+  // For JWT, we just remove tokens from localStorage
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("refresh_token");
+  localStorage.removeItem("user");
+  window.location.href = '/';
+};
+
+export const getCurrentUser = async (): Promise<User> => {
+  const res = await API.get<User>("auth/users/me/");
+=======
   await API.post("auth/logout/");
   localStorage.removeItem("access_token");
   localStorage.removeItem("user");
@@ -57,6 +120,7 @@ export const logout = async (): Promise<void> => {
 
 export const getCurrentUser = async (): Promise<User> => {
   const res = await API.get<User>("auth/me/");
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
   return res.data;
 };
 
@@ -65,8 +129,23 @@ export const getStoredUser = (): User | null => {
   return userStr ? JSON.parse(userStr) : null;
 };
 
+<<<<<<< HEAD
+export const updateCurrentUser = async (data: { name?: string; email?: string; password?: string; profile_picture?: File }): Promise<User> => {
+  const formData = new FormData();
+  if (data.name) formData.append('name', data.name);
+  if (data.email) formData.append('email', data.email);
+  if (data.password) formData.append('password', data.password);
+  if (data.profile_picture) formData.append('profile_picture', data.profile_picture);
+
+  const res = await API.patch<User>("auth/users/me/", formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+=======
 export const updateCurrentUser = async (data: { name?: string; email?: string; password?: string }): Promise<User> => {
   const res = await API.patch<User>("auth/me/", data);
+>>>>>>> d3f2e15e7c192706ccca1f1e91e5c76934a284ed
   return res.data;
 };
 
